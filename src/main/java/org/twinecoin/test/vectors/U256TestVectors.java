@@ -13,9 +13,34 @@ import java.util.Random;
  */
 public class U256TestVectors {
 
+	private final static BigInteger U256_MAX = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE);
+	private final static BigInteger U256_ZERO = BigInteger.ZERO;
+
 	public static List<String> generateVectors() {
+		Random r = getRandom();
+
+		List<List<BigInteger>> pair = generateBigIntegerList(r);
+
+		List<String> lines = new ArrayList<String>();
+
+		lines.addAll(generateU256BinaryOperatorVectors(pair.get(0), pair.get(1)));
+		lines.add("");
+		lines.addAll(generateU256xU32BinaryOperatorVectors(r, pair.get(0)));
+
+		return lines;
+	}
+
+	public static Random getRandom() {
+		Random r = new Random();
+
+		// Seed random so that results are consistent
+		r.setSeed(0x280e788cff6ec2bbL);
+		return r;
+	}
+
+	public static List<List<BigInteger>> generateBigIntegerList(Random r) {
 		List<BigInteger> integerList = new ArrayList<BigInteger>();
-		
+
 		/**
 		 * The u256 class uses 32-bit unsigned words internally.
 		 *
@@ -28,14 +53,8 @@ public class U256TestVectors {
 		 *   0xFFFFFFFF
 		 *   Random value
 		 */
-		
-		Random r = new Random();
-		
-		// Seed random so that results are consistent
-		r.setSeed(0x280e788cff6ec2bbL);
-		
 		int[] edgeValues = new int[] {0x00000000, 0x00000001, 0xFFFFFFFE, 0xFFFFFFFF};
-		
+
 		int[] value = new int[8];
 		for (int i = 0; i < 390625; i++) {
 			int rem = i;
@@ -50,27 +69,24 @@ public class U256TestVectors {
 			}
 			integerList.add(intToBigInteger(value));
 		}
-		
+
 		List<BigInteger> aList = new ArrayList<BigInteger>();
 		List<BigInteger> bList = new ArrayList<BigInteger>();
 
 		/**
 		 * Extremes
 		 */
-		BigInteger max256 = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE);
-		BigInteger zero = BigInteger.ZERO;
-		
-		aList.add(zero);
-		bList.add(zero);
+		aList.add(U256_ZERO);
+		bList.add(U256_ZERO);
 
-		aList.add(zero);
-		bList.add(max256);
+		aList.add(U256_ZERO);
+		bList.add(U256_MAX);
 
-		aList.add(max256);
-		bList.add(zero);
+		aList.add(U256_MAX);
+		bList.add(U256_ZERO);
 
-		aList.add(max256);
-		bList.add(max256);
+		aList.add(U256_MAX);
+		bList.add(U256_MAX);
 
 		/**
 		 * Divide by zero
@@ -79,7 +95,7 @@ public class U256TestVectors {
 			aList.add(integerList.get(r.nextInt(integerList.size())));
 			bList.add(integerList.get(0));
 		}
-		
+
 		/**
 		 * Almost equal
 		 */
@@ -88,7 +104,7 @@ public class U256TestVectors {
 			aList.add(v);
 			bList.add(v.add(BigInteger.valueOf(i - 5)));
 		}
-		
+
 		/**
 		 * Single bit different
 		 */
@@ -98,16 +114,15 @@ public class U256TestVectors {
 			BigInteger bit = BigInteger.ONE.shiftLeft(r.nextInt(32) + (32 * i));
 			bList.add(ref.xor(bit));
 		}
-		
+
 		/**
 		 * Directed vectors
 		 */
-		
 		for (int i = 0; i < 500; i++) {
 			aList.add(integerList.get(r.nextInt(integerList.size())));
 			bList.add(integerList.get(r.nextInt(integerList.size())));
 		}
-		
+
 		/**
 		 * Purely random vectors
 		 */
@@ -115,7 +130,7 @@ public class U256TestVectors {
 			aList.add(new BigInteger(256, r));
 			bList.add(new BigInteger(256, r));
 		}
-		
+
 		/**
 		 * Purely random vectors, with some half width
 		 */
@@ -123,10 +138,17 @@ public class U256TestVectors {
 			aList.add(new BigInteger(r.nextBoolean() ? 256 : 128, r));
 			bList.add(new BigInteger(r.nextBoolean() ? 256 : 128, r));
 		}
-		
+
+		List<List<BigInteger>> pair = new ArrayList<List<BigInteger>>(2);
+		pair.add(aList);
+		pair.add(bList);
+		return pair;
+	}
+
+	public static List<String> generateU256BinaryOperatorVectors(List<BigInteger> aList, List<BigInteger> bList) {
 		List<String> lines = new ArrayList<String>();
-		
-		lines.add("typedef struct _tw_u256_test_vector {");
+
+		lines.add("typedef struct _tw_u256_test_vector_256x256 {");
 		lines.add("  tw_u256 a;             // a");
 		lines.add("  tw_u256 b;             // b");
 		lines.add("  int a_equal_b;         // a == b");
@@ -140,18 +162,18 @@ public class U256TestVectors {
 		lines.add("  tw_u256 a_div_b;       // a / b");
 		lines.add("  tw_u256 a_rem_b;       // a / b");
 		lines.add("  int div_by_0;          // divide by 0");
-		lines.add("} tw_u256_test_vector;");
+		lines.add("} tw_u256_test_vector_256x256;");
 		lines.add("");
-		
-		lines.add("tw_u256_test_vector u256_test_vectors[] =");
+
+		lines.add("tw_u256_test_vector_256x256 u256_test_vectors_256x256[] =");
 		lines.add("  {");
-		
+
 		String align = "                                                                                               ";
-		
+
 		for (int i = 0; i < aList.size(); i++) {
 			BigInteger a = aList.get(i);
 			BigInteger b = bList.get(i);
-			
+
 			BigInteger add = a.add(b);
 			BigInteger sub = a.subtract(b);
 			BigInteger mul = a.multiply(b);
@@ -165,11 +187,11 @@ public class U256TestVectors {
 			lines.add("      " + (a.equals(b) ? "1," : "0,") + align + "    // equals");
 			lines.add("      " + a.compareTo(b) + "," + align + (a.compareTo(b) >= 0 ? " " : "") + "   // compare");
 			lines.add("      " + bigIntegerToU256(add) + ",    // a + b");
-			lines.add("      " + (add.compareTo(max256) > 0 ? 1 : 0) + "," + align + "    // carry");
+			lines.add("      " + (add.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // carry");
 			lines.add("      " + bigIntegerToU256(sub) + ",    // a - b");
 			lines.add("      " + (sub.compareTo(BigInteger.ZERO) < 0 ? 1 : 0) + "," + align + "    // borrow");
 			lines.add("      " + bigIntegerToU256(mul) + ",    // a * b");
-			lines.add("      " + (mul.compareTo(max256) > 0 ? 1 : 0) + "," + align + "    // overflow");
+			lines.add("      " + (mul.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // overflow");
 			lines.add("      " + bigIntegerToU256(div) + ",    // a / b");
 			lines.add("      " + bigIntegerToU256(rem) + ",    // a % b");
 			lines.add("      " + (b.compareTo(BigInteger.ZERO) == 0 ? 1 : 0) + "," + align + "    // div_by_zero");
@@ -177,7 +199,59 @@ public class U256TestVectors {
 		}
 		lines.add("  };");
 		lines.add("");
-		lines.add("#define U256_TEST_VECTORS_LENGTH " + aList.size());
+		lines.add("#define U256_TEST_VECTORS_256X256_LENGTH " + aList.size());
+		
+		return lines;		
+	}
+	
+	public static List<String> generateU256xU32BinaryOperatorVectors(Random r, List<BigInteger> aList) {
+		List<String> lines = new ArrayList<String>();
+		
+		lines.add("typedef struct _tw_u256_test_vector_256x32 {");
+		lines.add("  tw_u256 a;             // a");
+		lines.add("  tw_u32 b;              // b");
+		lines.add("  tw_u32 s;              // shift (32-bit words)");
+		lines.add("  tw_u256 a_mul_b;       // a * b");
+		lines.add("  int a_mul_b_overflow;  // Overflow");
+		lines.add("} tw_u256_test_vector_256x32;");
+		lines.add("");
+		
+		lines.add("tw_u256_test_vector_256x32 u256_test_vectors_256x32[] =");
+		lines.add("  {");
+		
+		String align = "                                                                                      ";
+		
+		int[] edgeValues = new int[] {0x00000000, 0x00000001, 0xFFFFFFFE, 0xFFFFFFFF};
+		
+		for (int i = 0; i < aList.size(); i++) {
+			BigInteger a = aList.get(i);
+			long bLong;
+			
+			if (r.nextBoolean()) {
+				bLong = r.nextInt() & 0xFFFFFFFFL;
+			} else {
+				bLong = edgeValues[r.nextInt(4)] & 0xFFFFFFFFL;
+			}
+			
+			BigInteger b = BigInteger.valueOf(bLong);
+			
+			long s = r.nextInt() & 0xFFFFFFFFL;
+			
+			int maskedS = (int) (s & 0x7);
+			BigInteger mul = a.multiply(b).shiftLeft(32 * maskedS);
+			
+			lines.add("    // Vector " + i);
+			lines.add("    {");
+			lines.add("      " + bigIntegerToU256(a) + ",    // a");
+			lines.add("      " + String.format("0x%08x", b) + "," + align + "    // b");
+			lines.add("      " + String.format("0x%08x", s) + "," + align + "    // 32-bit word shifts");
+			lines.add("      " + bigIntegerToU256(mul) + ",    // a * b");
+			lines.add("      " + (mul.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // overflow");
+			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
+		}
+		lines.add("  };");
+		lines.add("");
+		lines.add("#define U256_TEST_VECTORS_256X32_LENGTH " + aList.size());
 		
 		return lines;		
 	}

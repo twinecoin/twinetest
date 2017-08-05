@@ -213,6 +213,10 @@ public class U256TestVectors {
 		lines.add("  tw_u32 s;              // shift (32-bit words)");
 		lines.add("  tw_u256 a_mul_b;       // a * b");
 		lines.add("  int a_mul_b_overflow;  // Overflow");
+		lines.add("  tw_u256 a_add_b;       // a + b");
+		lines.add("  int a_add_b_carry;     // Carry");
+		lines.add("  tw_u256 a_sub_b;       // a - b");
+		lines.add("  int a_sub_b_borrow;    // Borrow");
 		lines.add("} tw_u256_test_vector_256x32;");
 		lines.add("");
 		
@@ -233,13 +237,17 @@ public class U256TestVectors {
 				bLong = edgeValues[r.nextInt(4)] & 0xFFFFFFFFL;
 			}
 			
+			int s = r.nextInt();
+			
 			BigInteger b = BigInteger.valueOf(bLong);
-			
-			long s = r.nextInt() & 0xFFFFFFFFL;
-			
-			int maskedS = (int) (s & 0x7);
+
+			int maskedS = s & 0x7;
 			BigInteger mul = a.multiply(b).shiftLeft(32 * maskedS);
 			
+			BigInteger add = a.add(b.shiftLeft(32 * maskedS));
+
+			BigInteger sub = a.subtract(b.shiftLeft(32 * maskedS));
+
 			lines.add("    // Vector " + i);
 			lines.add("    {");
 			lines.add("      " + bigIntegerToU256(a) + ",    // a");
@@ -247,6 +255,10 @@ public class U256TestVectors {
 			lines.add("      " + String.format("0x%08x", s) + "," + align + "    // 32-bit word shifts");
 			lines.add("      " + bigIntegerToU256(mul) + ",    // a * b");
 			lines.add("      " + (mul.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // overflow");
+			lines.add("      " + bigIntegerToU256(add) + ",    // a + b");
+			lines.add("      " + (add.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // carry");
+			lines.add("      " + bigIntegerToU256(sub) + ",    // a - b");
+			lines.add("      " + (sub.compareTo(U256_ZERO) < 0 ? 1 : 0) + "," + align + "    // borrow");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
 		lines.add("  };");

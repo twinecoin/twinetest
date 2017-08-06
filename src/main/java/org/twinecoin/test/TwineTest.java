@@ -6,14 +6,25 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.List;
 
+import org.twinecoin.test.crypt.SHA256;
+import org.twinecoin.test.vectors.SHA256TestVectors;
 import org.twinecoin.test.vectors.U256TestVectors;
 
 public class TwineTest {
 	
+	public final static String[] MIT_HEADER = new String[] {
+		"/**              Copyright (c) 2017 Twinecoin Developers",
+		" * The file is licenced under the MIT software license, see LICENCE",
+		" * or http://www.opensource.org/licenses/mit-license.php.",
+		" */"
+	};
+
 	public static void main(String[] args) {
 		writeFile("vectors_u256.h", U256TestVectors.generateVectors());
+		writeFile("vectors_sha256.h", SHA256TestVectors.generateVectors());
 	}
 	
 	private static void writeFile(String filename, List<String> lines) {
@@ -29,6 +40,11 @@ public class TwineTest {
 			
 			BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(fos, StandardCharsets.UTF_8));
 			
+			for (String line : MIT_HEADER) {
+				writer.write(line);
+				writer.newLine();
+			}
+
 			String defineName = filename.toUpperCase().replace('.', '_');
 			writer.write("#ifndef " + defineName);
 			writer.newLine();

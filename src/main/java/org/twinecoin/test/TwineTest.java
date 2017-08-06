@@ -6,10 +6,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 import java.util.List;
 
-import org.twinecoin.test.crypt.SHA256;
+import org.twinecoin.test.crypt.BouncyCastleLoader;
 import org.twinecoin.test.vectors.SHA256TestVectors;
 import org.twinecoin.test.vectors.U256TestVectors;
 
@@ -23,6 +22,11 @@ public class TwineTest {
 	};
 
 	public static void main(String[] args) {
+		if (!BouncyCastleLoader.init()) {
+			System.out.println("Initialization Failure for Bouncy Castle Provider");
+			return;
+		}
+
 		writeFile("vectors_u256.h", U256TestVectors.generateVectors());
 		writeFile("vectors_sha256.h", SHA256TestVectors.generateVectors());
 	}

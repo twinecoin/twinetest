@@ -100,6 +100,7 @@ public class BouncyCastleLoader {
 				provider = (Provider) bouncyCastleProviderClass.newInstance();
 			} catch (InstantiationException e) {
 			} catch (IllegalAccessException e) {
+			} catch (ClassCastException e) {
 			}
 		}
 

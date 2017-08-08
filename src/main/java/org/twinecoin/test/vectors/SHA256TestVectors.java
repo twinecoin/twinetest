@@ -188,7 +188,7 @@ public class SHA256TestVectors {
 		List<String> lines = new ArrayList<String>();
 
 		List<byte[]> hashes = new ArrayList<byte[]>(messages.size());
-		MessageDigest md = SHA256.getMessageDigest();
+		MessageDigest md = SHA256.getSHA256MessageDigest();
 
 		for (int i = 0; i < messages.size(); i++) {
 			byte[] message = messages.get(i);

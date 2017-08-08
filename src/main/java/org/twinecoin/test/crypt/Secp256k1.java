@@ -11,6 +11,8 @@ import java.security.Signature;
 import java.security.SignatureException;
 import java.security.interfaces.ECPrivateKey;
 import java.security.interfaces.ECPublicKey;
+import java.security.spec.ECField;
+import java.security.spec.ECFieldFp;
 import java.security.spec.EncodedKeySpec;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -31,21 +33,44 @@ public class Secp256k1 {
 	private static final byte[] publicUncompressedPrefix = hexDecode("3056301006072a8648ce3d020106052b8104000a034200");
 
 	private static final ECPublicKey publicKeyG;
+	private static final BigInteger n;
+	private static final BigInteger p;
 	private static final byte[] testMessage = hexDecode("0123456789ABCDEFFEDBCA98765432100123456789ABCDEFFEDBCA9876543210");
 
 	static {
 		BouncyCastleLoader.init();
-		ECPublicKey G = null;
+		ECPublicKey publicKeyGLocal = null;
+		BigInteger nLocal = null;
+		BigInteger pLocal = null;
+
 		ECPrivateKey g = getECPrivateKey(BigInteger.ONE);
 		if (g != null) {
 			BigInteger gX = g.getParams().getGenerator().getAffineX();
 			BigInteger gY = g.getParams().getGenerator().getAffineY();
-			G = getECPublicKey(gX, gY);
+			publicKeyGLocal = getECPublicKey(gX, gY);
+			if (publicKeyGLocal != null) {
+				nLocal = publicKeyGLocal.getParams().getOrder();
+				ECField field = publicKeyGLocal.getParams().getCurve().getField();
+				if (field instanceof ECFieldFp) {
+					pLocal = ((ECFieldFp) field).getP();
+				}
+			}
 		}
-		publicKeyG = G;
+		publicKeyG = publicKeyGLocal;
+		n = nLocal;
+		p = pLocal;
 	}
 
 	public static ECPrivateKey getECPrivateKey(BigInteger x) {
+		if (x == null) {
+			throw new NullPointerException("Private key may not be null");
+		}
+		if (x.compareTo(BigInteger.ONE) < 0) {
+			throw new IllegalArgumentException("Private key may not be zero or negative");
+		}
+		if (n != null && x.compareTo(n) >= 0) {
+			throw new IllegalArgumentException("Private key must be less than the order of the curve");
+		}
 		byte[] encoded = new byte[privateLength];
 
 		System.arraycopy(privatePrefix, 0, encoded, 0, privatePrefix.length);
@@ -69,6 +94,15 @@ public class Secp256k1 {
 	}
 
 	public static byte[] sign(ECPrivateKey pri, byte[] message) {
+		if (pri == null) {
+			throw new NullPointerException("Private key may not be null");
+		}
+		if (message == null) {
+			throw new NullPointerException("Message may not be null");
+		}
+		if (message.length != 32) {
+			throw new IllegalArgumentException("Message must be 32 bytes");
+		}
 		try {
 			Signature signer = Signature.getInstance("NONEwithECDSA", "BC");
 			signer.initSign(pri);
@@ -83,6 +117,18 @@ public class Secp256k1 {
 	}
 
 	public static boolean verify(ECPublicKey pub, byte[] message, byte[] sig) {
+		if (pub == null) {
+			throw new NullPointerException("Public key may not be null");
+		}
+		if (sig == null) {
+			throw new NullPointerException("Signature may not be null");
+		}
+		if (message == null) {
+			throw new NullPointerException("Message may not be null");
+		}
+		if (message.length != 32) {
+			throw new IllegalArgumentException("Message must be 32 bytes");
+		}
 		try {
 			Signature verifier = Signature.getInstance("NONEwithECDSA", "BC");
 			verifier.initVerify(pub);
@@ -97,6 +143,10 @@ public class Secp256k1 {
 	}
 
 	public static ECPublicKey getECPublicKey(ECPrivateKey pri) {
+		if (pri == null) {
+			throw new NullPointerException("Private key may not be null");
+		}
+
 		// There is no ECPrivateKey.getPublicKey() method.
 		// ECDH does point multiplication internally, so can be used
 		// instead.  It returns the x coordinate of the public key.
@@ -139,6 +189,18 @@ public class Secp256k1 {
 	}
 
 	public static ECPublicKey getECPublicKey(BigInteger x, BigInteger y) {
+		if (x == null) {
+			throw new NullPointerException("X coordinate may not be null");
+		}
+		if (y == null) {
+			throw new NullPointerException("Y coordinate may not be null");
+		}
+		if (x.compareTo(BigInteger.ZERO) < 0 || (p != null && x.compareTo(p) >= 0)) {
+			throw new IllegalArgumentException("X coordinate must be less than the prime modulus");
+		}
+		if (y.compareTo(BigInteger.ZERO) < 0 || (p != null && y.compareTo(p) >= 0)) {
+			throw new IllegalArgumentException("Y coordinate must be less than the prime modulus");
+		}
 		byte[] encoded = new byte[publicUncompressedPrefix.length + 1 + 64];
 
 		System.arraycopy(publicUncompressedPrefix, 0, encoded, 0, publicUncompressedPrefix.length);
@@ -162,6 +224,12 @@ public class Secp256k1 {
 	}
 
 	public static ECPublicKey getECPublicKey(BigInteger x, boolean odd) {
+		if (x == null) {
+			throw new NullPointerException("X coordinate may not be null");
+		}
+		if (x.compareTo(BigInteger.ZERO) < 0 || (p != null && x.compareTo(p) >= 0)) {
+			throw new IllegalArgumentException("X coordinate must be less than the prime modulus");
+		}
 		byte[] encoded = new byte[publicCompressedPrefix.length + 1 + 32];
 
 		System.arraycopy(publicCompressedPrefix, 0, encoded, 0, publicCompressedPrefix.length);
@@ -183,14 +251,14 @@ public class Secp256k1 {
 		return null;
 	}
 
-	public static void copyBigIntegerToByteArray(byte[] buf, BigInteger i, int pos, int len) {
+	private static void copyBigIntegerToByteArray(byte[] buf, BigInteger i, int pos, int len) {
 		byte[] integerBytes = i.toByteArray();
 
 		int integerLength = Math.min(integerBytes.length, len);
 		System.arraycopy(integerBytes, integerBytes.length - integerLength, buf, pos + len - integerLength, integerLength);
 	}
 
-	public static byte[] hexDecode(String hexString) {
+	private static byte[] hexDecode(String hexString) {
 		if ((hexString.length() & 1) != 0) {
 			return null;
 		}
@@ -203,7 +271,7 @@ public class Secp256k1 {
 		return buf;
 	}
 
-	public static int hexCharToInt(char c) {
+	private static int hexCharToInt(char c) {
 		if (c >= '0' && c <= '9') {
 			return c - '0';
 		} else if (c >= 'a' && c <= 'f') {

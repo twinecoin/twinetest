@@ -13,8 +13,8 @@ import java.util.Random;
  */
 public class U256TestVectors {
 
-	private final static BigInteger U256_MAX = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE);
-	private final static BigInteger U256_ZERO = BigInteger.ZERO;
+	public final static BigInteger U256_MAX = BigInteger.ONE.shiftLeft(256).subtract(BigInteger.ONE);
+	public final static BigInteger U256_ZERO = BigInteger.ZERO;
 
 	public static List<String> generateVectors() {
 		Random r = getRandom();
@@ -67,7 +67,7 @@ public class U256TestVectors {
 					value[j] = edgeValues[option];
 				}
 			}
-			integerList.add(intToBigInteger(value));
+			integerList.add(Convert.intToBigInteger(value));
 		}
 
 		List<BigInteger> aList = new ArrayList<BigInteger>();
@@ -182,18 +182,18 @@ public class U256TestVectors {
 			
 			lines.add("    // Vector " + i);
 			lines.add("    {");
-			lines.add("      " + bigIntegerToU256(a) + ",    // a");
-			lines.add("      " + bigIntegerToU256(b) + ",    // b");
+			lines.add("      " + Convert.bigIntegerToU256(a) + ",    // a");
+			lines.add("      " + Convert.bigIntegerToU256(b) + ",    // b");
 			lines.add("      " + (a.equals(b) ? "1," : "0,") + align + "    // equals");
 			lines.add("      " + a.compareTo(b) + "," + align + (a.compareTo(b) >= 0 ? " " : "") + "   // compare");
-			lines.add("      " + bigIntegerToU256(add) + ",    // a + b");
+			lines.add("      " + Convert.bigIntegerToU256(add) + ",    // a + b");
 			lines.add("      " + (add.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // carry");
-			lines.add("      " + bigIntegerToU256(sub) + ",    // a - b");
+			lines.add("      " + Convert.bigIntegerToU256(sub) + ",    // a - b");
 			lines.add("      " + (sub.compareTo(BigInteger.ZERO) < 0 ? 1 : 0) + "," + align + "    // borrow");
-			lines.add("      " + bigIntegerToU256(mul) + ",    // a * b");
+			lines.add("      " + Convert.bigIntegerToU256(mul) + ",    // a * b");
 			lines.add("      " + (mul.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // overflow");
-			lines.add("      " + bigIntegerToU256(div) + ",    // a / b");
-			lines.add("      " + bigIntegerToU256(rem) + ",    // a % b");
+			lines.add("      " + Convert.bigIntegerToU256(div) + ",    // a / b");
+			lines.add("      " + Convert.bigIntegerToU256(rem) + ",    // a % b");
 			lines.add("      " + (b.compareTo(BigInteger.ZERO) == 0 ? 1 : 0) + "," + align + "    // div_by_zero");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
@@ -250,14 +250,14 @@ public class U256TestVectors {
 
 			lines.add("    // Vector " + i);
 			lines.add("    {");
-			lines.add("      " + bigIntegerToU256(a) + ",    // a");
+			lines.add("      " + Convert.bigIntegerToU256(a) + ",    // a");
 			lines.add("      " + String.format("0x%08x", b) + "," + align + "    // b");
 			lines.add("      " + String.format("0x%08x", s) + "," + align + "    // 32-bit word shifts");
-			lines.add("      " + bigIntegerToU256(mul) + ",    // a * b");
+			lines.add("      " + Convert.bigIntegerToU256(mul) + ",    // a * b");
 			lines.add("      " + (mul.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // overflow");
-			lines.add("      " + bigIntegerToU256(add) + ",    // a + b");
+			lines.add("      " + Convert.bigIntegerToU256(add) + ",    // a + b");
 			lines.add("      " + (add.compareTo(U256_MAX) > 0 ? 1 : 0) + "," + align + "    // carry");
-			lines.add("      " + bigIntegerToU256(sub) + ",    // a - b");
+			lines.add("      " + Convert.bigIntegerToU256(sub) + ",    // a - b");
 			lines.add("      " + (sub.compareTo(U256_ZERO) < 0 ? 1 : 0) + "," + align + "    // borrow");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
@@ -267,34 +267,4 @@ public class U256TestVectors {
 		
 		return lines;		
 	}
-	
-	private static String bigIntegerToU256(BigInteger value) {
-		BigInteger mask = BigInteger.valueOf(0x00000000FFFFFFFFL);
-		
-		StringBuilder buf = new StringBuilder();
-		buf.append("{");
-		for (int i = 256 - 32; i >= 0; i -= 32) {
-			if (i < 256 - 32) {
-				buf.append(", ");
-			}
-			long word = value.shiftRight(i).and(mask).longValue();
-			buf.append(String.format("0x%08x", word));
-		}
-		buf.append("}");
-		return buf.toString();
-	}
-
-	private static BigInteger intToBigInteger(int[] value) {
-		byte[] bytes = new byte[1 + value.length * 4];
-		bytes[0] = 0;
-		for (int i = 0; i < value.length; i++) {
-			int b = (i << 2) + 1;
-			bytes[b + 0] = (byte) (value[i] >> 24);
-			bytes[b + 1] = (byte) (value[i] >> 16);
-			bytes[b + 2] = (byte) (value[i] >> 8);
-			bytes[b + 3] = (byte) (value[i] >> 0);
-		}
-		return new BigInteger(bytes);
-	}
-
 }

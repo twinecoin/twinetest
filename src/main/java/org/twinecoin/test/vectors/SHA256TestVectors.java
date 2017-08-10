@@ -172,8 +172,8 @@ public class SHA256TestVectors {
 
 			lines.add("    // Vector " + i);
 			lines.add("    {");
-			lines.add("      " + bytesToH256(a) + ",    // a");
-			lines.add("      " + bytesToH256(b) + ",    // b");
+			lines.add("      " + Convert.bytesToH256(a) + ",    // a");
+			lines.add("      " + Convert.bytesToH256(b) + ",    // b");
 			lines.add("      " + (Arrays.equals(a, b) ? "1," : "0,") + align + "    // equals");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
@@ -202,7 +202,7 @@ public class SHA256TestVectors {
 		lines.add("tw_u8* tw_h256_test_vector_messages[] = {");
 
 		for (byte[] message : messages) {
-			lines.add("    " + bytesToU8(message, false) + ",");
+			lines.add("    " + Convert.bytesToU8(message, false) + ",");
 		}
 
 		lines.add("  };");
@@ -218,7 +218,7 @@ public class SHA256TestVectors {
 		lines.add("tw_h256 tw_h256_test_vector_hashes[] = {");
 
 		for (byte[] hash : hashes) {
-			lines.add("    {" + bytesToU8(hash, true) + "},");
+			lines.add("    {" + Convert.bytesToU8(hash, true) + "},");
 		}
 
 		lines.add("  };");
@@ -227,42 +227,4 @@ public class SHA256TestVectors {
 
 		return lines;
 	}
-
-	private static String bytesToH256(byte[] hash) {
-		StringBuilder buf = new StringBuilder();
-		buf.append("{");
-		for (int i = 0; i < 32; i++) {
-			if (i > 0) {
-				buf.append(", ");
-			}
-			buf.append(String.format("0x%02x", hash[i] & 0xFF));
-		}
-		buf.append("}");
-		return buf.toString();
-	}
-
-	private static String bytesToU8(byte[] message, boolean forceHex) {
-		boolean hasInvalid = false;
-		for (byte m : message) {
-			int b = m & 0xFF;
-			if (forceHex || b < 32 || b > 127 || b == '"' || b == '\'' || b == '\\') {
-				hasInvalid = true;
-				break;
-			}
-		}
-		StringBuilder sb = new StringBuilder(message.length * 4 + 2);
-		sb.append('"');
-		for (int i = 0; i < message.length; i++) {
-			int b = message[i] & 0xFF;
-			if (hasInvalid || b < 32 || b > 127 || b == '"' || b == '\'' || b == '\\') {
-				sb.append("\\x");
-				sb.append(String.format("%02x", message[i]));
-			} else {
-				sb.append((char) b);
-			}
-		}
-		sb.append('"');
-		return sb.toString();
-	}
-
 }

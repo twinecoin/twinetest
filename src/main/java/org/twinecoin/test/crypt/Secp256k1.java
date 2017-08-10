@@ -61,6 +61,14 @@ public class Secp256k1 {
 		p = pLocal;
 	}
 
+	public static BigInteger getOrder() {
+		return n;
+	}
+
+	public static BigInteger getP() {
+		return p;
+	}
+
 	public static ECPrivateKey getECPrivateKey(BigInteger x) {
 		if (x == null) {
 			throw new NullPointerException("Private key may not be null");
@@ -249,6 +257,31 @@ public class Secp256k1 {
 		} catch (ClassCastException e) {
 		}
 		return null;
+	}
+
+	public static byte[] encodeDER(ECPublicKey pub, boolean compressed) {
+		byte[] encoded = new byte[compressed ? 33 : 65];
+
+		BigInteger x = pub.getW().getAffineX();
+		BigInteger y = pub.getW().getAffineY();
+
+		if (compressed) {
+			if (y.and(BigInteger.ONE).equals(BigInteger.ONE)) {
+				encoded[0] = 0x03;
+			} else {
+				encoded[0] = 0x02;
+			}
+		} else {
+			encoded[0] = 0x04;
+		}
+
+		copyBigIntegerToByteArray(encoded, x, 1, 32);
+
+		if (!compressed) {
+			copyBigIntegerToByteArray(encoded, y, 33, 32);
+		}
+
+		return encoded;
 	}
 
 	private static void copyBigIntegerToByteArray(byte[] buf, BigInteger i, int pos, int len) {

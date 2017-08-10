@@ -10,6 +10,7 @@ import java.util.List;
 
 import org.twinecoin.test.crypt.BouncyCastleLoader;
 import org.twinecoin.test.vectors.SHA256TestVectors;
+import org.twinecoin.test.vectors.Secp256k1TestVectors;
 import org.twinecoin.test.vectors.U256TestVectors;
 
 public class TwineTest {
@@ -29,6 +30,7 @@ public class TwineTest {
 
 		writeFile("vectors_u256.h", U256TestVectors.generateVectors());
 		writeFile("vectors_sha256.h", SHA256TestVectors.generateVectors());
+		writeFile("vectors_secp256k1.h", Secp256k1TestVectors.generateVectors());
 	}
 	
 	private static void writeFile(String filename, List<String> lines) {

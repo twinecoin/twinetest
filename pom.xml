@@ -4,7 +4,7 @@
  
   <groupId>org.twinecoin.twinetest</groupId>
   <artifactId>twinetest</artifactId>
-  <version>0.1-Release</version>
+  <version>0.1.0-SNAPSHOT</version>
   <packaging>jar</packaging>
  
   <name>Twinecoin Test Vectors Generator</name>

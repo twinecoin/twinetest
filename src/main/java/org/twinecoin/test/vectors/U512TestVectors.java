@@ -339,7 +339,6 @@ public class U512TestVectors {
 		lines.add("  int a_add_b_carry;        // Carry");
 		lines.add("  tw_u512 a_sub_b;          // a - b");
 		lines.add("  int a_sub_b_borrow;       // Borrow");
-		lines.add("  tw_u64_float exp_float;   // U64 float");
 		lines.add("  int msb_pos;              // MSB position");
 		lines.add("} tw_u512_test_vector_512x64;");
 		lines.add("");
@@ -361,69 +360,14 @@ public class U512TestVectors {
 				bLong = edgeValues[r.nextInt(edgeValues.length)];
 			}
 			
-			int s = r.nextInt();
-			
 			BigInteger b = BigInteger.valueOf(bLong).and(U64_MAX);
-
-			int maskedS = s & 0x0F;
-			BigInteger mul = a.multiply(b).shiftLeft(32 * maskedS);
-			
-			BigInteger add = a.add(b.shiftLeft(32 * maskedS));
-
-			BigInteger sub = a.subtract(b.shiftLeft(32 * maskedS));
-			
-			int aMsbPosition = a.bitLength();
-			
-			int w_exp;
-			int b_exp;
-
-			if (s < 0) {
-				b_exp = aMsbPosition & 0x1F;
-			} else {
-				b_exp = s & 31;
-			}
-
-			w_exp = ((aMsbPosition - b_exp) >> 5) - 2;
-			
-			BigInteger man = a.shiftRight(32 * w_exp + b_exp);
-			
-			while (man.compareTo(U64_MAX) > 0) {
-				w_exp++;
-				man = man.shiftRight(32);
-			}
-			
-			if (a.equals(BigInteger.ZERO)) {
-				man = BigInteger.ZERO;
-				b_exp = 0;
-				w_exp = 0;
-			} else {
-				if (man.bitLength() != 64 && s < 0) {
-					throw new IllegalStateException("MSB of mantissa is not set for " + man.toString(16) + " in automatic mode, " + 
-							                        "a = " + a.toString(16) + ", w_exp = " + w_exp + ", b_exp = " + b_exp);
-				}
-			}
-			
-			int bMsbPosition = 63 - Long.numberOfLeadingZeros(bLong);
-			
-			if (bLong == 0) {
-				bMsbPosition = 0;
-			}
-			
+	
 			lines.add("    // Vector " + i);
 			lines.add("    // a = 0x" + String.format("0x%0128x", a));
-			lines.add("    // b = 0x" + String.format("0x%016x << (32 * (%08x & 0x0F))", b, s));
+			lines.add("    // b = 0x" + String.format("0x%016x", b));
 			lines.add("    {");
 			lines.add("      " + Convert.bigIntegerToU512(a) + ",            // a");
 			lines.add("      " + String.format("0x%016xULL", b) + "," + align + "               // b");
-			lines.add("      " + String.format("0x%08x", s) + "," + align + "                          // 32-bit word shifts");
-			lines.add("      " + Convert.bigIntegerToU512(mul) + ",            // a * b");
-			lines.add("      " + (mul.compareTo(U512_MAX) > 0 ? 1 : 0) + "," + align + "                                   // overflow");
-			lines.add("      " + Convert.bigIntegerToU512(add) + ",            // a + b");
-			lines.add("      " + (add.compareTo(U512_MAX) > 0 ? 1 : 0) + "," + align + "                                   // carry");
-			lines.add("      " + Convert.bigIntegerToU512(sub) + ",            // a - b");
-			lines.add("      " + (sub.compareTo(U512_ZERO) < 0 ? 1 : 0) + "," + align + "                                   // borrow");
-			lines.add("      " + Convert.toU64FloatString(man, w_exp, b_exp) + "," + align.substring(12) + " // exp_float");
-			lines.add("      " + String.format("0x%08x",  bMsbPosition) + "," + align + "                          // B msb position");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
 		lines.add("  };");

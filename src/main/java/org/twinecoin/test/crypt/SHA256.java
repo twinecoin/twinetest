@@ -30,11 +30,11 @@ public class SHA256 {
 	}
 
 	private static MessageDigest createDSHA256MessageDigest() {
-		DSHA256MessageDigest md = new DSHA256MessageDigest();
-		if (!md.isNull()) {
-			return md;
+		MessageDigest inner = getSHA256MessageDigest();
+		if (inner == null) {
+			return null;
 		}
-		return null;
+		return new DoubleMessageDigest(inner);
 	}
 
 	/**
@@ -57,39 +57,4 @@ public class SHA256 {
 		return localDSHA256MD.get();
 	}
 
-	private static class DSHA256MessageDigest extends MessageDigest {
-		private final MessageDigest SHA256md;
-
-		protected DSHA256MessageDigest() {
-			super("DSHA256");
-			SHA256md = getSHA256MessageDigest();
-		}
-
-		public boolean isNull() {
-			return SHA256md == null;
-		}
-
-		@Override
-		protected void engineUpdate(byte input) {
-			SHA256md.update(input);
-		}
-
-		@Override
-		protected void engineUpdate(byte[] input, int offset, int len) {
-			SHA256md.update(input, offset, len);
-		}
-
-		@Override
-		protected byte[] engineDigest() {
-			byte[] hash1 = SHA256md.digest();
-			SHA256md.reset();
-			SHA256md.update(hash1);
-			return SHA256md.digest();
-		}
-
-		@Override
-		protected void engineReset() {
-			SHA256md.reset();
-		}
-	}
 }

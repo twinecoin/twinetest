@@ -3,20 +3,36 @@ package org.twinecoin.test.vectors;
 import java.math.BigInteger;
 
 public class Convert {
-	public static String bigIntegerToU256(BigInteger value) {
-		BigInteger mask = BigInteger.valueOf(0x00000000FFFFFFFFL);
+	public static String bigIntegerToU512Strict(BigInteger value, boolean strict) {
+		if (value.compareTo(BigInteger.ONE.shiftLeft(512)) > 0) {
+			throw new IllegalArgumentException("BigInteger out of range for U512, " + value.toString(16));
+		}
+		return bigIntegerToU512(value);
+	}
+
+	public static String bigIntegerToU512(BigInteger value) {
+		BigInteger mask = BigInteger.ONE.shiftLeft(32).subtract(BigInteger.ONE);
 
 		StringBuilder buf = new StringBuilder();
 		buf.append("{");
-		for (int i = 256 - 32; i >= 0; i -= 32) {
-			if (i < 256 - 32) {
+		for (int i = 0; i < 512; i += 64) {
+			if (i > 0) {
 				buf.append(", ");
 			}
-			long word = value.shiftRight(i).and(mask).longValue();
-			buf.append(String.format("0x%08x", word));
+			long halfWord = value.shiftRight(i + 32).and(mask).longValue();
+			buf.append(String.format("0x%08x", halfWord));
+			halfWord = value.shiftRight(i).and(mask).longValue();
+			buf.append(String.format("%08xULL", halfWord));
 		}
 		buf.append("}");
 		return buf.toString();
+	}
+
+	public static String toU64FloatString(BigInteger man, int w_exp, int b_exp) {
+		if (man.compareTo(U512TestVectors.U64_MAX) > 0) {
+			throw new IllegalArgumentException("Mantissa out of range, " + man);
+		}
+		return String.format("{0x%016xULL, 0x%08x, 0x%08x}", man, w_exp, b_exp);
 	}
 
 	public static BigInteger intToBigInteger(int[] value) {
@@ -32,6 +48,30 @@ public class Convert {
 		return new BigInteger(bytes);
 	}
 
+	public static BigInteger longToBigInteger(long[] value) {
+		byte[] bytes = new byte[1 + value.length * 8];
+		bytes[0] = 0;
+		for (int i = 0; i < value.length; i++) {
+			int b = (i << 3) + 1;
+			bytes[b + 0] = (byte) (value[i] >> 56);
+			bytes[b + 1] = (byte) (value[i] >> 48);
+			bytes[b + 2] = (byte) (value[i] >> 40);
+			bytes[b + 3] = (byte) (value[i] >> 32);
+			bytes[b + 4] = (byte) (value[i] >> 24);
+			bytes[b + 5] = (byte) (value[i] >> 16);
+			bytes[b + 6] = (byte) (value[i] >> 8);
+			bytes[b + 7] = (byte) (value[i] >> 0);
+		}
+		return new BigInteger(bytes);
+	}
+
+	public static long twoIntsToLong(int a, int b) {
+		long aLong = (long) a;
+		long bLong = (long) b;
+		long combined = (aLong << 32) | (bLong & 0xFFFFFFFFL);
+		return combined;
+	}
+
 	public static String bytesToH256(byte[] hash) {
 		StringBuilder buf = new StringBuilder();
 		buf.append("{");
@@ -45,24 +85,34 @@ public class Convert {
 		return buf.toString();
 	}
 
-	public static String bytesToU8(byte[] message, boolean forceHex) {
-		boolean hasInvalid = false;
-		for (byte m : message) {
-			int b = m & 0xFF;
-			if (forceHex || b < 32 || b > 127 || b == '"' || b == '\'' || b == '\\') {
-				hasInvalid = true;
-				break;
+	public static String bytesToU8(boolean forceHex, byte[] ... messages) {
+		int length = 0;
+		boolean hasInvalid = forceHex;
+		outerLoop:
+		for (byte[] message : messages) {
+			length += message.length;
+			if (hasInvalid) {
+				continue;
+			}
+			for (byte m : message) {
+				int b = m & 0xFF;
+				if (b < 32 || b > 127 || b == '"' || b == '\'' || b == '\\') {
+					hasInvalid = true;
+					continue outerLoop;
+				}
 			}
 		}
-		StringBuilder sb = new StringBuilder(message.length * 4 + 2);
+		StringBuilder sb = new StringBuilder(length * 4 + 2);
 		sb.append('"');
-		for (int i = 0; i < message.length; i++) {
-			int b = message[i] & 0xFF;
-			if (hasInvalid || b < 32 || b > 127 || b == '"' || b == '\'' || b == '\\') {
-				sb.append("\\x");
-				sb.append(String.format("%02x", message[i]));
-			} else {
-				sb.append((char) b);
+		for (byte[] message : messages) {
+			for (int i = 0; i < message.length; i++) {
+				int b = message[i] & 0xFF;
+				if (hasInvalid) {
+					sb.append("\\x");
+					sb.append(String.format("%02x", message[i]));
+				} else {
+					sb.append((char) b);
+				}
 			}
 		}
 		sb.append('"');

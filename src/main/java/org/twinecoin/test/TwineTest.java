@@ -9,16 +9,15 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.twinecoin.test.crypt.BouncyCastleLoader;
-import org.twinecoin.test.vectors.SHA256TestVectors;
-import org.twinecoin.test.vectors.Secp256k1TestVectors;
-import org.twinecoin.test.vectors.U256TestVectors;
+import org.twinecoin.test.vectors.SHATestVectors;
+import org.twinecoin.test.vectors.U512TestVectors;
 
 public class TwineTest {
 	
 	public final static String[] MIT_HEADER = new String[] {
-		"/**              Copyright (c) 2017 Twinecoin Developers",
-		" * The file is licenced under the MIT software license, see LICENCE",
-		" * or http://www.opensource.org/licenses/mit-license.php.",
+		"/**          Copyright (c) 2017-2019 Twinecoin Developers\n" +
+		" * The file is licenced under the MIT software license, see LICENCE\n" +
+		" * or http://www.opensource.org/licenses/mit-license.php.\n" +
 		" */"
 	};
 
@@ -28,9 +27,8 @@ public class TwineTest {
 			return;
 		}
 
-		writeFile("vectors_u256.h", U256TestVectors.generateVectors());
-		writeFile("vectors_sha256.h", SHA256TestVectors.generateVectors());
-		writeFile("vectors_secp256k1.h", Secp256k1TestVectors.generateVectors());
+		writeFile("vectors_u512.h", U512TestVectors.generateVectors());
+		writeFile("vectors_sha.h", SHATestVectors.generateVectors());
 	}
 	
 	private static void writeFile(String filename, List<String> lines) {

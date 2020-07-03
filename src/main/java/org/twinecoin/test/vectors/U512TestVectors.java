@@ -301,8 +301,8 @@ public class U512TestVectors {
 			BigInteger rem = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.remainder(b);
 			
 			lines.add("    // Vector " + i);
-			lines.add("    // a = 0x" + String.format("0x%0128x", a));
-			lines.add("    // b = 0x" + String.format("0x%0128x", b));
+			lines.add("    // a = " + String.format("0x%0128x", a));
+			lines.add("    // b = " + String.format("0x%0128x", b));
 			lines.add("    {");
 			lines.add("      " + Convert.bigIntegerToU512(a) + ",            // a");
 			lines.add("      " + Convert.bigIntegerToU512(b) + ",            // b");
@@ -333,13 +333,8 @@ public class U512TestVectors {
 		lines.add("  tw_u512 a;                // a");
 		lines.add("  tw_u64 b;                 // b");
 		lines.add("  tw_u32 s;                 // shift (32-bit words)");
-		lines.add("  tw_u512 a_mul_b;          // a * b");
-		lines.add("  int a_mul_b_overflow;     // Overflow");
-		lines.add("  tw_u512 a_add_b;          // a + b");
-		lines.add("  int a_add_b_carry;        // Carry");
-		lines.add("  tw_u512 a_sub_b;          // a - b");
-		lines.add("  int a_sub_b_borrow;       // Borrow");
-		lines.add("  int msb_pos;              // MSB position");
+		lines.add("  tw_u512 a_lshift;         // a << (s & 511)");
+		lines.add("  tw_u32 a_lshift_overflow; // left shift overflow");
 		lines.add("} tw_u512_test_vector_512x64;");
 		lines.add("");
 		
@@ -359,15 +354,26 @@ public class U512TestVectors {
 			} else {
 				bLong = edgeValues[r.nextInt(edgeValues.length)];
 			}
-			
+
 			BigInteger b = BigInteger.valueOf(bLong).and(U64_MAX);
-	
+
+			int s = r.nextInt();
+
+			int bitShift = s & 511;
+
+			BigInteger aLeftShift = a.shiftLeft(bitShift);
+
+			int leftShiftOverflow = aLeftShift.compareTo(U512_MAX) > 0 ? 1 : 0;
+
 			lines.add("    // Vector " + i);
-			lines.add("    // a = 0x" + String.format("0x%0128x", a));
-			lines.add("    // b = 0x" + String.format("0x%016x", b));
+			lines.add("    // a = " + String.format("0x%0128x", a));
+			lines.add("    // b = " + String.format("0x%016x", b));
 			lines.add("    {");
 			lines.add("      " + Convert.bigIntegerToU512(a) + ",            // a");
 			lines.add("      " + String.format("0x%016xULL", b) + "," + align + "               // b");
+			lines.add("      " + String.format("0x%08xU", s) + "," + align + "                         // s");
+			lines.add("      " + Convert.bigIntegerToU512(aLeftShift) + ",            // a_lshift");
+			lines.add("      " + String.format("0x%08xU", leftShiftOverflow) + "," + align + "                         // a_lshift_overflow");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
 		lines.add("  };");

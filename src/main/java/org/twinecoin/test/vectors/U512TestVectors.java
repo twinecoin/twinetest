@@ -56,7 +56,7 @@ public class U512TestVectors {
 				0xFFFFFFFE_FFFFFFFFL,
 				0xFFFFFFFF_FFFFFFFEL,
 				0xFFFFFFFF_FFFFFFFFL};
-		
+
 		int[] intEdgeValues = new int[] {
 				0x00000000, 
 				0x00000001, 
@@ -70,27 +70,27 @@ public class U512TestVectors {
 				0xFFFFFFFF};
 
 		edgeValues = new long[intEdgeValues.length * intEdgeValues.length + longEdgeValues.length];
-		
+
 		System.arraycopy(longEdgeValues, 0, edgeValues, 0, longEdgeValues.length);
-		
+
 		for (int i = 0; i < intEdgeValues.length; i++) {
 			int k = longEdgeValues.length + i * intEdgeValues.length;
 			for (int j = 0; j < intEdgeValues.length; j++) {
 				edgeValues[k + j] = Convert.twoIntsToLong(intEdgeValues[i], intEdgeValues[j]);
-			}			
+			}
 		}
 	}
-	
+
 	public static List<String> generateVectors() {
 		Random r = getRandom();
 
-		List<List<BigInteger>> pair = generateBigIntegerList(r);
+		List<List<BigInteger>> triple = generateBigIntegerList(r);
 
 		List<String> lines = new ArrayList<String>();
 
-		lines.addAll(generateU512BinaryOperatorVectors(pair.get(0), pair.get(1)));
+		lines.addAll(generateU512BinaryOperatorVectors(triple.get(0), triple.get(1), triple.get(2)));
 		lines.add("");
-		lines.addAll(generateU512xU64BinaryOperatorVectors(r, pair.get(0)));
+		lines.addAll(generateU512xU64BinaryOperatorVectors(r, triple.get(0), triple.get(2)));
 
 		return lines;
 	}
@@ -121,6 +121,9 @@ public class U512TestVectors {
 
 		List<BigInteger> aList = new ArrayList<BigInteger>();
 		List<BigInteger> bList = new ArrayList<BigInteger>();
+		List<BigInteger> sectionList = new ArrayList<BigInteger>();
+
+		BigInteger sectionNumber = BigInteger.ONE;
 
 		/**
 		 * Extremes
@@ -143,107 +146,158 @@ public class U512TestVectors {
 			U512_MAX.subtract(BigInteger.ONE),    // 2^512 - 2
 			U512_MAX                              // 2^512 - 1
 		};
-		
+
 		for (int i = 0; i < extremes.length; i++) {
 			for (int j = 0; j < extremes.length; j++) {
 				aList.add(extremes[i]);
 				bList.add(extremes[j]);
+				sectionList.add(sectionNumber);
 			}
 		}
 
 		/**
 		 * Divide by zero
 		 */
+		sectionNumber = BigInteger.valueOf(2);
+
 		for (int i = 0; i < 10; i++) {
 			aList.add(integerList.get(r.nextInt(integerList.size())));
 			bList.add(U512_ZERO);
+			sectionList.add(sectionNumber);
 		}
-		
+
 		aList.add(U512_MAX);
 		bList.add(U512_ZERO);
-		
+		sectionList.add(sectionNumber);
+
 		/**
 		 * Single bits set
 		 */
-		
+		sectionNumber = BigInteger.valueOf(3);
+
 		for (int i = 0; i < 8; i++) {
 			for (int j = 0; j < 8; j++) {
 				aList.add(BigInteger.ONE.shiftLeft(i * 64 + r.nextInt(64)));
 				bList.add(BigInteger.ONE.shiftLeft(j * 64 + r.nextInt(64)));
+				sectionList.add(sectionNumber);
 			}
 		}
-		
+
 		for (int i = 0; i < 12; i++) {
 			for (int j = 0; j < 12; j++) {
 				for (int k = 0; k < (i == 0 ? 1 : 2); k++) {
 					for (int m = 0; m < (j == 0 ? 1 : 2); m++) {
 						aList.add(BigInteger.ONE.shiftLeft(i * 16 - k));
 						bList.add(BigInteger.ONE.shiftLeft(j * 16 - m));
+						sectionList.add(sectionNumber);
 					}
 				}
 			}
 		}
-		
+
 		aList.add(U512_HALF_MAX);
 		bList.add(U512_HALF_MAX);
+		sectionList.add(sectionNumber);
 
 		/**
 		 * Almost equal
 		 */
+		sectionNumber = BigInteger.valueOf(4);
 		for (int i = 0; i < 10; i++) {
 			BigInteger v = integerList.get(r.nextInt(integerList.size()));
 			aList.add(v);
 			bList.add(v.add(BigInteger.valueOf(i - 5)));
+			sectionList.add(sectionNumber);
 		}
 
 		/**
 		 * Single bit different
 		 */
+		sectionNumber = BigInteger.valueOf(5);
 		for (int i = 0; i < 16; i++) {
 			BigInteger ref = new BigInteger(512, r);
 			aList.add(ref);
 			BigInteger bit = BigInteger.ONE.shiftLeft(r.nextInt(32) + (32 * i));
 			bList.add(ref.xor(bit));
+			sectionList.add(sectionNumber);
 		}
 
 		/**
 		 * Directed vectors
 		 */
+		sectionNumber = BigInteger.valueOf(6);
 		for (int i = 0; i < 500; i++) {
 			aList.add(integerList.get(r.nextInt(integerList.size())));
 			bList.add(integerList.get(r.nextInt(integerList.size())));
+			sectionList.add(sectionNumber);
 		}
 
 		/**
 		 * Purely random vectors
 		 */
+		sectionNumber = BigInteger.valueOf(7);
 		for (int i = 0; i < 500; i++) {
 			aList.add(new BigInteger(512, r));
 			bList.add(new BigInteger(512, r));
+			sectionList.add(sectionNumber);
+		}
+
+		/**
+		 * Random vectors where a is a multiple of b
+		 */
+		sectionNumber = BigInteger.valueOf(8);
+		for (int i = 0; i < 500; i++) {
+			BigInteger a = new BigInteger(512, r);
+			BigInteger b = new BigInteger(512, r);
+
+			int aSize = r.nextInt(512);
+			int bSize = r.nextInt(512 - aSize);
+
+			a = a.and(BigInteger.ONE.shiftLeft(aSize - 1).subtract(BigInteger.ONE));
+			b = b.and(BigInteger.ONE.shiftLeft(bSize - 1).subtract(BigInteger.ONE));
+
+			if (aSize == 0) {
+				a = BigInteger.ZERO;
+			}
+
+			if (bSize == 0) {
+				b = BigInteger.ZERO;
+			}
+
+			a = a.multiply(b);
+
+			aList.add(a);
+			bList.add(b);
+			sectionList.add(sectionNumber);
 		}
 
 		/**
 		 * Purely random vectors, with some half width
 		 */
+		sectionNumber = BigInteger.valueOf(9);
 		for (int i = 0; i < 500; i++) {
 			aList.add(new BigInteger(r.nextBoolean() ? 512 : 256, r));
 			bList.add(new BigInteger(r.nextBoolean() ? 512 : 256, r));
+			sectionList.add(sectionNumber);
 		}
-		
+
 
 		/**
 		 * Purely random vectors of various lengths
 		 */
+		sectionNumber = BigInteger.valueOf(10);
 		for (int i = 1; i <= 32; i++) {
 			for (int j = 0; j < 20; j++) {
 				aList.add(new BigInteger(16 * i, r));
 				bList.add(new BigInteger(16 * i, r));
+				sectionList.add(sectionNumber);
 			}
 		}
-		
+
 		/**
 		 * Directed vectors of various lengths
 		 */
+		sectionNumber = BigInteger.valueOf(11);
 		for (int i = 1; i <= 32; i++) {
 			for (int j = 0; j < 20; j++) {
 				BigInteger a = integerList.get(r.nextInt(integerList.size()));
@@ -252,18 +306,20 @@ public class U512TestVectors {
 				b = b.and(BigInteger.ONE.shiftLeft(16 * (1 + r.nextInt(32))).subtract(BigInteger.ONE));
 				aList.add(a);
 				bList.add(b);
+				sectionList.add(sectionNumber);
 			}
 		}
 
-		List<List<BigInteger>> pair = new ArrayList<List<BigInteger>>(2);
-		pair.add(aList);
-		pair.add(bList);
-		return pair;
+		List<List<BigInteger>> triple = new ArrayList<List<BigInteger>>(3);
+		triple.add(aList);
+		triple.add(bList);
+		triple.add(sectionList);
+		return triple;
 	}
 
-	public static List<String> generateU512BinaryOperatorVectors(List<BigInteger> aList, List<BigInteger> bList) {
+	public static List<String> generateU512BinaryOperatorVectors(List<BigInteger> aList, List<BigInteger> bList, List<BigInteger> sectionList) {
 		List<String> lines = new ArrayList<String>();
-		
+
 		lines.add("#include \"../../src/math/src/tw_uint.h\"");
 
 		lines.add("typedef struct _tw_u512_test_vector_512x512 {");
@@ -290,16 +346,23 @@ public class U512TestVectors {
 				"                                                                                               " +
 				"                                                                                               ";
 
+		BigInteger lastSection = BigInteger.valueOf(-1);
+
 		for (int i = 0; i < aList.size(); i++) {
 			BigInteger a = aList.get(i);
 			BigInteger b = bList.get(i);
+			BigInteger section = sectionList.get(i);
 
 			BigInteger add = a.add(b);
 			BigInteger sub = a.subtract(b);
 			BigInteger mul = a.multiply(b);
 			BigInteger div = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.divide(b);
 			BigInteger rem = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.remainder(b);
-			
+
+			if (!lastSection.equals(section)) {
+				lastSection = section;
+				lines.add("    // <<<<<<<<<<<<<<<<< Section " + section + " >>>>>>>>>>>>>>>>>");
+			}
 			lines.add("    // Vector " + i);
 			lines.add("    // a = " + String.format("0x%0128x", a));
 			lines.add("    // b = " + String.format("0x%0128x", b));
@@ -322,13 +385,13 @@ public class U512TestVectors {
 		lines.add("  };");
 		lines.add("");
 		lines.add("#define U512_TEST_VECTORS_512X512_LENGTH " + aList.size());
-		
-		return lines;		
+
+		return lines;
 	}
-	
-	public static List<String> generateU512xU64BinaryOperatorVectors(Random r, List<BigInteger> aList) {
+
+	public static List<String> generateU512xU64BinaryOperatorVectors(Random r, List<BigInteger> aList, List<BigInteger> sectionList) {
 		List<String> lines = new ArrayList<String>();
-		
+
 		lines.add("typedef struct _tw_u512_test_vector_512x64 {");
 		lines.add("  tw_u512 a;                // a");
 		lines.add("  tw_u64 b;                 // b");
@@ -337,18 +400,21 @@ public class U512TestVectors {
 		lines.add("  tw_u32 a_lshift_overflow; // left shift overflow");
 		lines.add("} tw_u512_test_vector_512x64;");
 		lines.add("");
-		
+
 		lines.add("tw_u512_test_vector_512x64 u512_test_vectors_512x64[] =");
 		lines.add("  {");
-		
+
 		String align = 
 				"                                                                                " +
 				"                                                                                ";
-		
+
+		BigInteger lastSection = BigInteger.valueOf(-1);
+
 		for (int i = 0; i < aList.size(); i++) {
 			BigInteger a = aList.get(i);
+			BigInteger section = sectionList.get(i);
 			long bLong;
-			
+
 			if (r.nextBoolean()) {
 				bLong = r.nextLong();
 			} else {
@@ -365,6 +431,10 @@ public class U512TestVectors {
 
 			int leftShiftOverflow = aLeftShift.compareTo(U512_MAX) > 0 ? 1 : 0;
 
+			if (!lastSection.equals(section)) {
+				lastSection = section;
+				lines.add("    // <<<<<<<<<<<<<<<<< Section " + section + " >>>>>>>>>>>>>>>>>");
+			}
 			lines.add("    // Vector " + i);
 			lines.add("    // a = " + String.format("0x%0128x", a));
 			lines.add("    // b = " + String.format("0x%016x", b));
@@ -379,7 +449,7 @@ public class U512TestVectors {
 		lines.add("  };");
 		lines.add("");
 		lines.add("#define U512_TEST_VECTORS_512X64_LENGTH " + aList.size());
-		
-		return lines;		
+
+		return lines;
 	}
 }

@@ -3,6 +3,21 @@ package org.twinecoin.test.vectors;
 import java.math.BigInteger;
 
 public class Convert {
+	private static char[] hexChars = new char[] {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'};
+
+	private static String[] hexBytes;
+
+	static {
+		hexBytes = new String[256];
+		for (int i = 0; i < 256; i++) {
+			hexBytes[i] = new String(new char[] {hexChars[i >> 4], hexChars[i & 0xF]});
+		}
+	}
+
+	public static String getHex(int b) {
+		return hexBytes[b & 0xFF];
+	}
+
 	public static String bigIntegerToU512Strict(BigInteger value, boolean strict) {
 		if (value.compareTo(BigInteger.ONE.shiftLeft(512)) > 0) {
 			throw new IllegalArgumentException("BigInteger out of range for U512, " + value.toString(16));
@@ -26,6 +41,19 @@ public class Convert {
 		}
 		buf.append("}");
 		return buf.toString();
+	}
+
+	public static BigInteger LEBytesToBigInteger(byte[] message) {
+		byte[] bigEndian = new byte[message.length + 1];
+		int j = message.length - 1;
+		for (int i = 1; i <= message.length; i++) {
+			bigEndian[i] = message[j--];
+		}
+		return new BigInteger(bigEndian);
+	}
+
+	public static String LEBytesToU512(byte[] message) {
+		return bigIntegerToU512(LEBytesToBigInteger(message));
 	}
 
 	public static String toU64FloatString(BigInteger man, int w_exp, int b_exp) {
@@ -79,7 +107,7 @@ public class Convert {
 			if (i > 0) {
 				buf.append(", ");
 			}
-			buf.append(String.format("0x%02x", hash[i] & 0xFF));
+			buf.append(getHex(hash[i] & 0xFF));
 		}
 		buf.append("}");
 		return buf.toString();
@@ -109,7 +137,7 @@ public class Convert {
 				int b = message[i] & 0xFF;
 				if (hasInvalid) {
 					sb.append("\\x");
-					sb.append(String.format("%02x", message[i]));
+					sb.append(getHex(b));
 				} else {
 					sb.append((char) b);
 				}

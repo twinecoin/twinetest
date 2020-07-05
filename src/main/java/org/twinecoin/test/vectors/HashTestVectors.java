@@ -68,6 +68,8 @@ public class HashTestVectors {
 		repeats.add(8);
 		messages.add("a".getBytes(StandardCharsets.US_ASCII));
 		repeats.add(1000000);
+		//messages.add("0123456789ABCDEF".getBytes(StandardCharsets.US_ASCII));
+		//repeats.add(0x2000000);
 
 		/**
 		 * Purely random vectors
@@ -90,31 +92,14 @@ public class HashTestVectors {
 	}
 
 	public static List<String> generateSHA256Vectors(List<byte[]> messages, List<Integer> repeats) {
-		List<byte[]> repeatedMessages = new ArrayList<byte[]>(messages.size());
-
-		for (int i = 0; i < messages.size(); i++) {
-			byte[] message = messages.get(i);
-			byte[] repeatedMessage;
-			int r = repeats.get(i);
-			if (r == 1) {
-				repeatedMessage = message;
-			} else {
-				repeatedMessage = new byte[message.length * r];
-				for (int j = 0; j < r; j++) {
-					System.arraycopy(message, 0, repeatedMessage, j * message.length, message.length);
-				}
-			}
-			repeatedMessages.add(repeatedMessage);
-		}
-
 		List<String> lines = new ArrayList<String>();
 
-		List<byte[]> SHA256Hashes = generateHashes(repeatedMessages, SHA256.getSHA256MessageDigest());
-		List<byte[]> SHA512Hashes = generateHashes(repeatedMessages, SHA512.getSHA512MessageDigest());
-		List<byte[]> RIPEMD160Hashes = generateHashes(repeatedMessages, RIPEMD160.getRIPEMD160MessageDigest());
-		List<byte[]> DSHA256Hashes = generateHashes(repeatedMessages, SHA256.getDSHA256MessageDigest());
-		List<byte[]> DSHA512Hashes = generateHashes(repeatedMessages, SHA512.getDSHA512MessageDigest());
-		List<byte[]> DRIPEMD160Hashes = generateHashes(repeatedMessages, RIPEMD160.getDRIPEMD160MessageDigest());
+		List<byte[]> SHA256Hashes = generateHashes(messages, repeats, SHA256.getSHA256MessageDigest());
+		List<byte[]> SHA512Hashes = generateHashes(messages, repeats, SHA512.getSHA512MessageDigest());
+		List<byte[]> RIPEMD160Hashes = generateHashes(messages, repeats, RIPEMD160.getRIPEMD160MessageDigest());
+		List<byte[]> DSHA256Hashes = generateHashes(messages, repeats, SHA256.getDSHA256MessageDigest());
+		List<byte[]> DSHA512Hashes = generateHashes(messages, repeats, SHA512.getDSHA512MessageDigest());
+		List<byte[]> DRIPEMD160Hashes = generateHashes(messages, repeats, RIPEMD160.getDRIPEMD160MessageDigest());
 
 		lines.add("tw_u8* tw_hash_test_vector_messages[] = {");
 
@@ -200,11 +185,16 @@ public class HashTestVectors {
 		return lines;
 	}
 
-	private static List<byte[]> generateHashes(List<byte[]> messages, MessageDigest md) {
+	private static List<byte[]> generateHashes(List<byte[]> messages, List<Integer> repeats, MessageDigest md) {
 		List<byte[]> hashes = new ArrayList<byte[]>(messages.size());
-		for (byte[] message : messages) {
+		for (int i = 0; i < messages.size(); i++) {
 			md.reset();
-			byte[] hash = md.digest(message);
+			byte[] message = messages.get(i);
+			int repeat = repeats.get(i);
+			for (int j = 0; j < repeat; j++) {
+				md.update(message);
+			}
+			byte[] hash = md.digest();
 			hashes.add(hash);
 		}
 		return hashes;

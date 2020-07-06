@@ -18,9 +18,9 @@ import java.util.Arrays;
 public class BouncyCastleLoader {
 	private final static Provider bouncyCastleProvider;
 
-	private final static String SHA256Expected = "4c7fb5f7fb043fedc4b7e7af88871050f61af8dea7aaade87f8ebd60e509cd89";
+	private final static String SHA256Expected = "e78f96eb59066c94c94fb2d6b5eb80f52feac6f5f9776898634f8addec6e2137";
 
-	private final static String jarFilename = "bcprov-jdk15on-1.57.jar";
+	private final static String jarFilename = "bcprov-jdk15on-1.65.jar";
 
 	static {
 		File dir = new File("jars");

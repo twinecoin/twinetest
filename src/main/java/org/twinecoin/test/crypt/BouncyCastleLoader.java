@@ -1,5 +1,4 @@
 package org.twinecoin.test.crypt;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -16,11 +15,15 @@ import java.security.Security;
 import java.util.Arrays;
 
 public class BouncyCastleLoader {
-	private final static Provider bouncyCastleProvider;
-
 	private final static String SHA256Expected = "e78f96eb59066c94c94fb2d6b5eb80f52feac6f5f9776898634f8addec6e2137";
 
 	private final static String jarFilename = "bcprov-jdk15on-1.65.jar";
+
+	private final static String bouncyCastleProviderName = "org.bouncycastle.jce.provider.BouncyCastleProvider";
+
+	private final static Provider bouncyCastleProvider;
+
+	private final static URLClassLoader urlClassLoader;
 
 	static {
 		File dir = new File("jars");
@@ -34,34 +37,36 @@ public class BouncyCastleLoader {
 			jarPresent = checkSHA256(f, SHA256Expected);
 		}
 
-		Class<? extends Thread> currentThreadClass = Thread.currentThread().getClass();
-
 		if (!jarPresent) {
-			InputStream in = currentThreadClass.getResourceAsStream("/" + jarFilename);
-			OutputStream out = null;
-			if (in != null) {
-				try {
-					out = new FileOutputStream(f);
-					byte[] buf = new byte[16384];
-					int read = 1;
-					while (read > 0) {
-						read = in.read(buf);
-						if (read > 0) {
-							out.write(buf, 0, read);
-						}
-					}
-				} catch (IOException e) {
-				} finally {
+			InputStream in = BouncyCastleLoader.class.getResourceAsStream("/" + jarFilename);
+			try {
+				if (in != null) {
+					OutputStream out = null;
 					try {
-						if (out != null) {
-							out.close();
+						out = new FileOutputStream(f);
+						byte[] buf = new byte[16384];
+						int read = 1;
+						while (read > 0) {
+							read = in.read(buf);
+							if (read > 0) {
+								out.write(buf, 0, read);
+							}
 						}
 					} catch (IOException e) {
 					} finally {
-						try {
-							in.close();
-						} catch (IOException e) {}
+						if (out != null) {
+							try {
+								out.close();
+							} catch (IOException e) {}
+						}
+
 					}
+				}
+			} finally {
+				if (in != null) {
+					try {
+						in.close();
+					} catch (IOException e) {}
 				}
 			}
 			jarPresent = checkSHA256(f, SHA256Expected);
@@ -76,48 +81,81 @@ public class BouncyCastleLoader {
 			}
 		}
 
-		URLClassLoader urlClassLoader = null;
+		Provider prov = null;
+		URLClassLoader urlCL = null;
 
 		if (url != null) {
-			URL[] childURLs = new URL[] {url};
-			ClassLoader parentClassLoader = currentThreadClass.getClassLoader();
-			urlClassLoader = URLClassLoader.newInstance(childURLs, parentClassLoader);
-		}
+			ClassLoader systemClassLoader = ClassLoader.getSystemClassLoader();
 
-		Class<?> bouncyCastleProviderClass = null;
-
-		if (urlClassLoader != null) {
-			try {
-				bouncyCastleProviderClass = urlClassLoader.loadClass("org.bouncycastle.jce.provider.BouncyCastleProvider");
-			} catch (ClassNotFoundException e) {
+			if (systemClassLoader instanceof URLClassLoader) {
+				URL[] systemURLs = ((URLClassLoader) systemClassLoader).getURLs();
+				if (systemURLs != null) {
+					URL[] newURLs = new URL[systemURLs.length + 1];
+					System.arraycopy(systemURLs, 0, newURLs, 0, systemURLs.length);
+					newURLs[newURLs.length - 1] = url;
+					urlCL = new URLClassLoader(newURLs, systemClassLoader);
+					Class<?> clazz = null;
+					try {
+						clazz = urlCL.loadClass(bouncyCastleProviderName);
+					} catch (ClassNotFoundException e) {
+					}
+					if (clazz != null) {
+						try {
+							Object p = clazz.newInstance();
+							if (p instanceof Provider) {
+								prov = (Provider) p;
+							}
+						} catch (InstantiationException e) {
+						} catch (IllegalAccessException e) {
+						}
+					}
+				}
 			}
 		}
 
-		Provider provider = null;
+		urlClassLoader = urlCL;
 
-		if (bouncyCastleProviderClass != null) {
-			try {
-				provider = (Provider) bouncyCastleProviderClass.newInstance();
-			} catch (InstantiationException e) {
-			} catch (IllegalAccessException e) {
-			} catch (ClassCastException e) {
-			}
+		if (prov != null) {
+			Security.addProvider(prov);
 		}
 
-		if (provider != null) {
-			Security.addProvider(provider);
-		}
-
-		bouncyCastleProvider = provider;
+		bouncyCastleProvider = prov;
 	}
 
 	/**
-	 * Loads the Bouncy Castle Provider if not already loaded.<br>
+	 * Initializes the Bouncy Castle Provider<br>
+	 * <br>
+	 * The Bouncy Castle Provider is loaded with a new ClassLoader and
+	 * a runnable of the named class is instantiated with the ClassLoader and 
+	 * the .run() method is called.<br>
+	 * <br>
 	 *
 	 * @return true if the provider has been loaded
 	 */
-	public static boolean init() {
-		return bouncyCastleProvider != null;
+	public static boolean init(String runnableName) {
+		if (bouncyCastleProvider == null || urlClassLoader == null) {
+			return false;
+		}
+		Class<?> clazz = null;
+		try {
+			clazz	= urlClassLoader.loadClass(runnableName);
+		} catch (ClassNotFoundException e) {
+			return false;
+		}
+		if (clazz == null) {
+			return false;
+		}
+		Runnable r = null;
+		try {
+			r = (Runnable) clazz.newInstance();
+		} catch (InstantiationException e) {
+		} catch (IllegalAccessException e) {
+		}
+		if (r == null) {
+			return false;
+		}
+		r.run();
+		return true;
 	}
 
 	private static boolean checkSHA256(File f, String expected) {

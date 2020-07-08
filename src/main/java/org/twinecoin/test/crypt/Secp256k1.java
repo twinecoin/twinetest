@@ -38,7 +38,6 @@ public class Secp256k1 {
 	private static final byte[] testMessage = hexDecode("0123456789ABCDEFFEDBCA98765432100123456789ABCDEFFEDBCA9876543210");
 
 	static {
-		BouncyCastleLoader.init();
 		ECPublicKey publicKeyGLocal = null;
 		BigInteger nLocal = null;
 		BigInteger pLocal = null;

@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 
 import org.twinecoin.test.crypt.BouncyCastleLoader;
+import org.twinecoin.test.vectors.Ed25519TestVectors;
 import org.twinecoin.test.vectors.HashTestVectors;
 import org.twinecoin.test.vectors.U512TestVectors;
 
@@ -32,6 +33,7 @@ public class TwineTest implements Runnable {
 	public void run() {
 		writeFile("vectors_u512.h", U512TestVectors.generateVectors());
 		writeFile("vectors_hash.h", HashTestVectors.generateVectors());
+		writeFile("vectors_ed25519.h", Ed25519TestVectors.generateVectors());
 	}
 
 	private static void writeFile(String filename, List<String> lines) {

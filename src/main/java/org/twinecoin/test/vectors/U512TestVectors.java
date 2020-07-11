@@ -398,6 +398,8 @@ public class U512TestVectors {
 		lines.add("  tw_u32 s;                 // shift (32-bit words)");
 		lines.add("  tw_u512 a_lshift;         // a << (s & 511)");
 		lines.add("  tw_u32 a_lshift_overflow; // left shift overflow");
+		lines.add("  tw_u512 a_rshift;         // a >> (s & 511)");
+		lines.add("  tw_u32 a_rshift_underflow;// right shift underflow");
 		lines.add("} tw_u512_test_vector_512x64;");
 		lines.add("");
 
@@ -431,6 +433,11 @@ public class U512TestVectors {
 
 			int leftShiftOverflow = aLeftShift.compareTo(U512_MAX) > 0 ? 1 : 0;
 
+			BigInteger aRightShift = a.shiftRight(bitShift);
+
+			int rightShiftUnderflow = a.and(BigInteger.ONE.shiftLeft(bitShift).subtract(BigInteger.ONE)).equals(BigInteger.ZERO) ?
+					                  0 : 1;
+
 			if (!lastSection.equals(section)) {
 				lastSection = section;
 				lines.add("    // <<<<<<<<<<<<<<<<< Section " + section + " >>>>>>>>>>>>>>>>>");
@@ -444,6 +451,8 @@ public class U512TestVectors {
 			lines.add("      " + String.format("0x%08xU", s) + "," + align + "                         // s");
 			lines.add("      " + Convert.bigIntegerToU512(aLeftShift) + ",            // a_lshift");
 			lines.add("      " + String.format("0x%08xU", leftShiftOverflow) + "," + align + "                         // a_lshift_overflow");
+			lines.add("      " + Convert.bigIntegerToU512(aRightShift) + ",            // a_rshift");
+			lines.add("      " + String.format("0x%08xU", rightShiftUnderflow) + "," + align + "                         // a_rshift_underflow");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
 		lines.add("  };");

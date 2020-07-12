@@ -84,13 +84,13 @@ public class U512TestVectors {
 	public static List<String> generateVectors() {
 		Random r = getRandom();
 
-		List<List<BigInteger>> triple = generateBigIntegerList(r);
+		List<List<BigInteger>> quad = generateBigIntegerList(r);
 
 		List<String> lines = new ArrayList<String>();
 
-		lines.addAll(generateU512BinaryOperatorVectors(triple.get(0), triple.get(1), triple.get(2)));
+		lines.addAll(generateU512BinaryOperatorVectors(quad.get(0), quad.get(1), quad.get(2), quad.get(3)));
 		lines.add("");
-		lines.addAll(generateU512xU64BinaryOperatorVectors(r, triple.get(0), triple.get(2)));
+		lines.addAll(generateU512xU64BinaryOperatorVectors(r, quad.get(0), quad.get(3)));
 
 		return lines;
 	}
@@ -310,14 +310,37 @@ public class U512TestVectors {
 			}
 		}
 
-		List<List<BigInteger>> triple = new ArrayList<List<BigInteger>>(3);
-		triple.add(aList);
-		triple.add(bList);
-		triple.add(sectionList);
-		return triple;
+		List<BigInteger> cList = new ArrayList<BigInteger>();
+
+		int size = aList.size();
+		for (int i = 0; i < size; i++) {
+			if (r.nextBoolean()) {
+				cList.add(aList.get(r.nextInt(size)));
+			} else {
+				cList.add(bList.get(r.nextInt(size)));
+			}
+		}
+
+		sectionNumber = BigInteger.valueOf(12);
+
+		for (int i = 0; i < 50; i++) {
+			BigInteger a = new BigInteger(r.nextBoolean()? 128 : 512, r);
+			aList.add(a);
+			bList.add(a);
+			cList.add(a);
+			sectionList.add(sectionNumber);
+		}
+
+		List<List<BigInteger>> quad = new ArrayList<List<BigInteger>>(3);
+		quad.add(aList);
+		quad.add(bList);
+		quad.add(cList);
+		quad.add(sectionList);
+		return quad;
 	}
 
-	public static List<String> generateU512BinaryOperatorVectors(List<BigInteger> aList, List<BigInteger> bList, List<BigInteger> sectionList) {
+	public static List<String> generateU512BinaryOperatorVectors(List<BigInteger> aList, List<BigInteger> bList, 
+			                                                     List<BigInteger> cList, List<BigInteger> sectionList) {
 		List<String> lines = new ArrayList<String>();
 
 		lines.add("#include \"../../src/math/src/tw_uint.h\"");
@@ -325,6 +348,7 @@ public class U512TestVectors {
 		lines.add("typedef struct _tw_u512_test_vector_512x512 {");
 		lines.add("  tw_u512 a;             // a");
 		lines.add("  tw_u512 b;             // b");
+		lines.add("  tw_u512 c;             // c");
 		lines.add("  int a_equal_b;         // a == b");
 		lines.add("  int a_comp_b;          // (a < b) ? -1 : (a == b) ? 0 : 1");
 		lines.add("  tw_u512 a_add_b;       // a + b");
@@ -336,6 +360,8 @@ public class U512TestVectors {
 		lines.add("  tw_u512 a_div_b;       // a / b");
 		lines.add("  tw_u512 a_rem_b;       // a / b");
 		lines.add("  int div_by_0;          // divide by 0");
+		lines.add("  tw_u512 a_add_c_mod_b; // (a + c) % b");
+		lines.add("  tw_u512 a_pow_c_mod_b; // pow(a, c) % b");
 		lines.add("} tw_u512_test_vector_512x512;");
 		lines.add("");
 
@@ -351,6 +377,8 @@ public class U512TestVectors {
 		for (int i = 0; i < aList.size(); i++) {
 			BigInteger a = aList.get(i);
 			BigInteger b = bList.get(i);
+			BigInteger c = cList.get(i);
+
 			BigInteger section = sectionList.get(i);
 
 			BigInteger add = a.add(b);
@@ -358,6 +386,8 @@ public class U512TestVectors {
 			BigInteger mul = a.multiply(b);
 			BigInteger div = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.divide(b);
 			BigInteger rem = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.remainder(b);
+			BigInteger modAdd = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.add(c).remainder(b);
+			BigInteger pow = BigInteger.ZERO.equals(b) ? BigInteger.ZERO : a.modPow(c, b);
 
 			if (!lastSection.equals(section)) {
 				lastSection = section;
@@ -366,9 +396,11 @@ public class U512TestVectors {
 			lines.add("    // Vector " + i);
 			lines.add("    // a = " + String.format("0x%0128x", a));
 			lines.add("    // b = " + String.format("0x%0128x", b));
+			lines.add("    // c = " + String.format("0x%0128x", c));
 			lines.add("    {");
 			lines.add("      " + Convert.bigIntegerToU512(a) + ",            // a");
 			lines.add("      " + Convert.bigIntegerToU512(b) + ",            // b");
+			lines.add("      " + Convert.bigIntegerToU512(c) + ",            // c");
 			lines.add("      " + (a.equals(b) ? "1," : "0,") + align + "     // equals");
 			lines.add("      " + a.compareTo(b) + "," + align + (a.compareTo(b) >= 0 ? " " : "") + "    // compare");
 			lines.add("      " + Convert.bigIntegerToU512(add) + ",            // a + b");
@@ -380,6 +412,8 @@ public class U512TestVectors {
 			lines.add("      " + Convert.bigIntegerToU512(div) + ",            // a / b");
 			lines.add("      " + Convert.bigIntegerToU512(rem) + ",            // a % b");
 			lines.add("      " + (b.compareTo(BigInteger.ZERO) == 0 ? 1 : 0) + "," + align + "     // div_by_zero");
+			lines.add("      " + Convert.bigIntegerToU512(modAdd) + ",            // (a + c) mod b");
+			lines.add("      " + Convert.bigIntegerToU512(pow) + ",            // pow(a,  c) mod b");
 			lines.add("    " + ((i == aList.size() - 1) ? "}" : "},"));
 		}
 		lines.add("  };");
